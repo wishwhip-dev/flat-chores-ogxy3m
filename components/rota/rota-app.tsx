@@ -185,7 +185,9 @@ export function RotaApp() {
         submitLabel="Save name"
         initialValue={renamedFlatmate?.name ?? ""}
         validate={(value) => (value ? null : "Give your flatmate a name.")}
-        onSubmit={(name) => renamedFlatmate && run(rota.renameFlatmate(renamedFlatmate.id, name))}
+        onSubmit={(name) => {
+          if (renamedFlatmate) run(rota.renameFlatmate(renamedFlatmate.id, name));
+        }}
       />
 
       {/* Rename a chore: this week, the tally and past history all follow. */}
@@ -199,7 +201,9 @@ export function RotaApp() {
         submitLabel="Save name"
         initialValue={renamingChore?.chore.name ?? ""}
         validate={(value) => validateChoreName(value, renamingChore?.chore.id)}
-        onSubmit={(name) => renamingChore && run(rota.renameChore(renamingChore.chore.id, name))}
+        onSubmit={(name) => {
+          if (renamingChore) run(rota.renameChore(renamingChore.chore.id, name));
+        }}
       />
     </main>
   );

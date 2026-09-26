@@ -248,9 +248,9 @@ export type FairnessRow = {
  */
 export async function getFairness(): Promise<FairnessRow[]> {
   const db = await tables();
-  const [flatmates, settings, completions, overrides] = await Promise.all([
+  const settings = await readSettings();
+  const [flatmates, completions, overrides] = await Promise.all([
     db.flatmates.orderBy("order").toArray(),
-    readSettings(),
     db.completions.where("week").equals(settings.currentWeek).toArray(),
     db.overrides.where("week").equals(settings.currentWeek).toArray(),
   ]);
