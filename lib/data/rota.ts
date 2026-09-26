@@ -12,6 +12,7 @@ import {
   type Chore,
   type ChoreOverride,
   type Completion,
+  type Flatmate,
   type RotaSettings,
   type WeekEntry,
 } from "@/lib/db";
