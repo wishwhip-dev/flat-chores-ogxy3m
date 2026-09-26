@@ -56,10 +56,10 @@ export type RotaState = {
 /** Everything the "This week" view needs, in one live read. */
 export async function getRotaState(): Promise<RotaState> {
   const db = await tables();
-  const [flatmates, chores, settings, completions, overrides] = await Promise.all([
+  const settings = await readSettings();
+  const [flatmates, chores, completions, overrides] = await Promise.all([
     db.flatmates.orderBy("order").toArray(),
     db.chores.orderBy("order").toArray(),
-    readSettings(),
     db.completions.where("week").equals(settings.currentWeek).toArray(),
     db.overrides.where("week").equals(settings.currentWeek).toArray(),
   ]);
@@ -145,11 +145,11 @@ export async function setOverride(choreId: string, flatmateId: string | null): P
  */
 export async function rotateWeek(): Promise<void> {
   const db = await tables();
-  await db.transaction("rw", db.settings, db.weeks, db.completions, db.overrides, db.chores, db.flatmates, async () => {
-    const [flatmates, chores, settings, completions, overrides] = await Promise.all([
+  const settings = await readSettings();
+  await db.transaction("rw", [db.settings, db.weeks, db.completions, db.overrides, db.chores, db.flatmates], async () => {
+    const [flatmates, chores, completions, overrides] = await Promise.all([
       db.flatmates.orderBy("order").toArray(),
       db.chores.orderBy("order").toArray(),
-      readSettings(),
       db.completions.where("week").equals(settings.currentWeek).toArray(),
       db.overrides.where("week").equals(settings.currentWeek).toArray(),
     ]);
