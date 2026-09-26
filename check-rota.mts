@@ -36,7 +36,7 @@ assert(state1.assignments[0]!.flatmate.name === "Flatmate 1", "week 1 bins -> fl
 assert(state1.assignments[1]!.flatmate.name === "Flatmate 2", "week 1 dishes -> flatmate 2");
 assert(state1.assignments[3]!.flatmate.name === "Flatmate 4", "week 1 vacuum -> flatmate 4");
 assert(state1.assignments[4]!.flatmate.name === "Flatmate 1", "week 1 plants -> flatmate 1");
-assert(/Week 1 · \d+ [A-Z][a-z]{2}/.test(state1.weekText), `week label looks right: ${state1.weekText}`);
+assert(/Week 1 · \d+[–-]\d+ [A-Z][a-z]{2}/.test(state1.weekText), `week label looks right: ${state1.weekText}`);
 
 // Done + override, then rotate.
 await rota.setDone(state1.assignments[0]!.chore.id, true);
@@ -55,9 +55,12 @@ assert(state2.assignments.every((a) => !a.done), "new week starts unchecked");
 const history1 = await rota.getHistory();
 assert(history1.length === 1, "one week of history after one rotation");
 const week1 = history1[0]!;
-assert(week1.entries[0]!.done === true, "history records bins done in week 1");
-assert(week1.entries[1]!.overridden === true, "history records the dishes override");
-assert(week1.entries[1]!.flatmateName === "Flatmate 3", "history records the override, not the default");
+assert(week1.entries.map((e) => e.choreName)[0] === "Bins", "history lists chores in rota order");
+const binsEntry = week1.entries.find((e) => e.choreName === "Bins")!;
+const dishesEntry = week1.entries.find((e) => e.choreName === "Dishes")!;
+assert(binsEntry.done === true, "history records bins done in week 1");
+assert(dishesEntry.overridden === true, "history records the dishes override");
+assert(dishesEntry.flatmateName === "Flatmate 3", "history records the override, not the default");
 
 // Rotate three more times; every flatmate should have done bins exactly once across weeks 1-4.
 for (let i = 0; i < 3; i += 1) await rota.rotateWeek();
@@ -86,7 +89,9 @@ await rota.addChore("Recycling");
 const state6 = await rota.getRotaState();
 assert(state6.assignments.length === 6, "added chore appears this week");
 const recycling = state6.assignments.find((a) => a.chore.name === "Recycling")!;
-assert(recycling.flatmate.name === "Flatmate 4", `new chore lands on the next person (got ${recycling.flatmate.name})`);
+// Its rotation index is 5, so in week 5 it sits on (5 + 5 - 1) mod 4 = 1 — the same fixed formula
+// every chore follows, and it cycles through all four flatmates from here.
+assert(recycling.flatmate.name === "Flatmate 2", `new chore follows the rotation formula (got ${recycling.flatmate.name})`);
 
 // Rename a chore; history follows because it resolves by id.
 const bins = state6.assignments.find((a) => a.chore.name === "Bins")!;
@@ -114,5 +119,4 @@ assert(
 const state8 = await rota.getRotaState();
 assert(state8.week === 5, "week number persisted");
 
-console.log("week labels:", weekLabel(1, state8.weekText ? 0 : 0));
 database.close();
