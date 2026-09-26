@@ -106,11 +106,12 @@ export async function renameChore(id: string, name: string): Promise<void> {
  */
 export async function removeChore(id: string): Promise<void> {
   const db = await tables();
+  const settings = await readSettings();
+  // Only this week's rows for this chore — the other chores' checkboxes and overrides stay.
   await db.transaction("rw", db.chores, db.completions, db.overrides, async () => {
-    const settings = await readSettings();
     await db.chores.delete(id);
-    await db.completions.where("week").equals(settings.currentWeek).delete();
-    await db.overrides.where("week").equals(settings.currentWeek).delete();
+    await db.completions.delete([settings.currentWeek, id]);
+    await db.overrides.delete([settings.currentWeek, id]);
   });
 }
 
