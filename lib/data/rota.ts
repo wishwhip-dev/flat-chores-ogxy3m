@@ -167,6 +167,7 @@ export async function rotateWeek(): Promise<void> {
         week,
         choreId: chore.id,
         choreName: chore.name,
+        choreOrder: chore.order,
         flatmateId: flatmate.id,
         flatmateName: flatmate.name,
         done: doneById.get(chore.id) ?? false,

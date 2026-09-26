@@ -43,6 +43,8 @@ export type WeekEntry = {
   week: number;
   choreId: string;
   choreName: string;
+  /** The chore's position in the rota when it was snapshot, so history lists it in rota order. */
+  choreOrder: number;
   flatmateId: string;
   flatmateName: string;
   done: boolean;
