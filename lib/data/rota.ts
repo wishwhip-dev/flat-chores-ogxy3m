@@ -224,7 +224,9 @@ export async function getHistory(): Promise<HistoryWeek[]> {
     .map(([week, rows]) => ({
       week,
       weekText: weekLabel(week, settings.startDate),
-      entries: rows.map((row) => ({
+      entries: rows
+        .sort((a, b) => a.choreOrder - b.choreOrder)
+        .map((row) => ({
         choreName: choreNames.get(row.choreId) ?? row.choreName,
         flatmateName: flatmateNames.get(row.flatmateId) ?? row.flatmateName,
         done: row.done,
