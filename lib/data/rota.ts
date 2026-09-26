@@ -12,11 +12,12 @@ import {
   type Chore,
   type ChoreOverride,
   type Completion,
-  type Flatmate,
   type RotaSettings,
   type WeekEntry,
 } from "@/lib/db";
 import { startOfWeek, weekLabel } from "@/lib/data/weeks";
+
+export type { Chore, Flatmate } from "@/lib/db";
 
 const tables = async () => await database.ready();
 
