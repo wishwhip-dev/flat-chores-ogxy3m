@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import type { ChoreAssignment, RotaState } from "@/lib/data/rota";
+import type { ChoreAssignment, Flatmate, RotaState } from "@/lib/data/rota";
 
 export type WeekViewActions = {
   onToggleDone: (choreId: string, done: boolean) => void;
@@ -35,10 +35,12 @@ export type WeekViewActions = {
 /** The select that hands this week's chore to a specific flatmate, or back to the rotation. */
 function OverrideSelect({
   assignment,
+  flatmates,
   onOverride,
 }: {
   assignment: ChoreAssignment;
-  onOverride: (choreId: string, flatmateId: string | null) => void;
+  flatmates: Flatmate[];
+  onOverride: WeekViewActions["onOverride"];
 }) {
   return (
     <Select
@@ -47,14 +49,11 @@ function OverrideSelect({
         onOverride(assignment.chore.id, value === assignment.autoFlatmate.id ? null : value)
       }
     >
-      <SelectTrigger
-        className="h-8 w-36"
-        aria-label={`Change who does ${assignment.chore.name}`}
-      >
+      <SelectTrigger className="h-8 w-36" aria-label={`Change who does ${assignment.chore.name}`}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {assignment.flatmates.map((mate) => (
+        {flatmates.map((mate) => (
           <SelectItem key={mate.id} value={mate.id}>
             {mate.name}
           </SelectItem>
@@ -65,27 +64,52 @@ function OverrideSelect({
 }
 
 /** The chore's name, clickable to rename, struck through when the chore is done. */
-function ChoreName({ assignment }: { assignment: ChoreAssignment }) {
+function ChoreName({
+  name,
+  done,
+  onRename,
+}: {
+  name: string;
+  done: boolean;
+  onRename: () => void;
+}) {
   return (
     <button
       type="button"
-      onClick={() => assignment.onRenameChore(assignment)}
+      onClick={onRename}
       className={cn(
         "rounded-sm text-left font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-        assignment.done && "text-muted-foreground line-through",
+        done && "text-muted-foreground line-through",
       )}
-      aria-label={`Rename chore ${assignment.chore.name}`}
+      aria-label={`Rename chore ${name}`}
     >
-      {assignment.chore.name}
+      {name}
     </button>
   );
 }
 
-declare module "@/lib/data/rota" {
-  interface ChoreAssignmentWithHandlers extends ChoreAssignment {
-    onRenameChore: (assignment: ChoreAssignment) => void;
-    flatmates: RotaState["flatmates"];
-  }
+function FlatmateName({
+  name,
+  done,
+  onRename,
+}: {
+  name: string;
+  done: boolean;
+  onRename: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onRename}
+      className={cn(
+        "rounded-sm underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+        done && "text-muted-foreground",
+      )}
+      aria-label={`Rename flatmate ${name}`}
+    >
+      {name}
+    </button>
+  );
 }
 
 export function WeekView({ state, actions }: { state: RotaState; actions: WeekViewActions }) {
@@ -101,42 +125,37 @@ export function WeekView({ state, actions }: { state: RotaState; actions: WeekVi
     );
   }
 
-  const rowTone = (assignment: ChoreAssignment) =>
-    assignment.done ? "bg-muted/40" : undefined;
+  const rowTone = (assignment: ChoreAssignment) => (assignment.done ? "bg-muted/40" : undefined);
 
   return (
     <>
-      {/* Phone: one card per chore, so nothing is squeezed. */}
+      {/* Phone: one card per chore, so nothing is squeezed into a table. */}
       <ul className="flex flex-col gap-3 md:hidden">
         {state.assignments.map((assignment) => (
-          <li
-            key={assignment.chore.id}
-            className={cn("rounded-lg border p-4", rowTone(assignment))}
-          >
+          <li key={assignment.chore.id} className={cn("rounded-lg border p-4", rowTone(assignment))}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <Checkbox
                   className="mt-1"
                   checked={assignment.done}
-                  onCheckedChange={(checked) => actions.onToggleDone(assignment.chore.id, checked === true)}
+                  onCheckedChange={(checked) =>
+                    actions.onToggleDone(assignment.chore.id, checked === true)
+                  }
                   aria-label={`Mark ${assignment.chore.name} as done`}
                 />
                 <div>
-                  <ChoreName assignment={{ ...assignment, onRenameChore: actions.onRenameChore, flatmates: state.flatmates }} />
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    <button
-                      type="button"
-                      onClick={() => actions.onRenameFlatmate(assignment.flatmate.id)}
-                      className="underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                      aria-label={`Rename flatmate ${assignment.flatmate.name}`}
-                    >
-                      {assignment.flatmate.name}
-                    </button>
-                    {assignment.overridden ? (
-                      <Badge variant="secondary" className="ml-2 align-middle">
-                        hand-assigned
-                      </Badge>
-                    ) : null}
+                  <ChoreName
+                    name={assignment.chore.name}
+                    done={assignment.done}
+                    onRename={() => actions.onRenameChore(assignment)}
+                  />
+                  <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                    <FlatmateName
+                      name={assignment.flatmate.name}
+                      done={assignment.done}
+                      onRename={() => actions.onRenameFlatmate(assignment.flatmate.id)}
+                    />
+                    {assignment.overridden ? <Badge variant="secondary">hand-assigned</Badge> : null}
                   </p>
                 </div>
               </div>
@@ -150,7 +169,11 @@ export function WeekView({ state, actions }: { state: RotaState; actions: WeekVi
               </Button>
             </div>
             <div className="mt-3">
-              <OverrideSelect assignment={{ ...assignment, flatmates: state.flatmates }} onOverride={actions.onOverride} />
+              <OverrideSelect
+                assignment={assignment}
+                flatmates={state.flatmates}
+                onOverride={actions.onOverride}
+              />
             </div>
           </li>
         ))}
@@ -176,33 +199,35 @@ export function WeekView({ state, actions }: { state: RotaState; actions: WeekVi
                 <TableCell>
                   <Checkbox
                     checked={assignment.done}
-                    onCheckedChange={(checked) => actions.onToggleDone(assignment.chore.id, checked === true)}
+                    onCheckedChange={(checked) =>
+                      actions.onToggleDone(assignment.chore.id, checked === true)
+                    }
                     aria-label={`Mark ${assignment.chore.name} as done`}
                   />
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <ChoreName assignment={{ ...assignment, onRenameChore: actions.onRenameChore, flatmates: state.flatmates }} />
-                    {assignment.overridden ? (
-                      <Badge variant="secondary">hand-assigned</Badge>
-                    ) : null}
+                    <ChoreName
+                      name={assignment.chore.name}
+                      done={assignment.done}
+                      onRename={() => actions.onRenameChore(assignment)}
+                    />
+                    {assignment.overridden ? <Badge variant="secondary">hand-assigned</Badge> : null}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <button
-                    type="button"
-                    onClick={() => actions.onRenameFlatmate(assignment.flatmate.id)}
-                    className={cn(
-                      "underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                      assignment.done && "text-muted-foreground",
-                    )}
-                    aria-label={`Rename flatmate ${assignment.flatmate.name}`}
-                  >
-                    {assignment.flatmate.name}
-                  </button>
+                  <FlatmateName
+                    name={assignment.flatmate.name}
+                    done={assignment.done}
+                    onRename={() => actions.onRenameFlatmate(assignment.flatmate.id)}
+                  />
                 </TableCell>
                 <TableCell>
-                  <OverrideSelect assignment={{ ...assignment, flatmates: state.flatmates }} onOverride={actions.onOverride} />
+                  <OverrideSelect
+                    assignment={assignment}
+                    flatmates={state.flatmates}
+                    onOverride={actions.onOverride}
+                  />
                 </TableCell>
                 <TableCell>
                   <Button
